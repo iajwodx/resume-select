@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.resume.mapper.ResumeMapper">
+
+    <resultMap id="ResumeResultMap" type="com.resume.entity.Resume">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="contact" column="contact"/>
+        <result property="expectedLocations" column="expected_locations"/>
+        <result property="workYears" column="work_years"/>
+        <result property="education" column="education"/>
+        <result property="salaryMin" column="salary_min"/>
+        <result property="salaryMax" column="salary_max"/>
+        <result property="skills" column="skills"/>
+        <result property="projectExperience" column="project_experience"/>
+        <result property="jobStatus" column="job_status"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="createTime" column="create_time"/>
+        <result property="modifyTime" column="modify_time"/>
+    </resultMap>
+
+    <sql id="selectColumns">
+        id, name, contact, expected_locations, work_years, education,
+        salary_min, salary_max, skills, project_experience, job_status,
+        update_time, create_time, modify_time
+    </sql>
+
+    <insert id="insert" parameterType="com.resume.entity.Resume" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO resume (name, contact, expected_locations, work_years, education,
+                           salary_min, salary_max, skills, project_experience, job_status, update_time)
+        VALUES (#{name}, #{contact}, #{expectedLocations}, #{workYears}, #{education},
+                #{salaryMin}, #{salaryMax}, #{skills}, #{projectExperience}, #{jobStatus}, #{updateTime})
+    </insert>
+
+    <update id="updateById" parameterType="com.resume.entity.Resume">
+        UPDATE resume
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="contact != null">contact = #{contact},</if>
+            <if test="expectedLocations != null">expected_locations = #{expectedLocations},</if>
+            <if test="workYears != null">work_years = #{workYears},</if>
+            <if test="education != null">education = #{education},</if>
+            <if test="salaryMin != null">salary_min = #{salaryMin},</if>
+            <if test="salaryMax != null">salary_max = #{salaryMax},</if>
+            <if test="skills != null">skills = #{skills},</if>
+            <if test="projectExperience != null">project_experience = #{projectExperience},</if>
+            <if test="jobStatus != null">job_status = #{jobStatus},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM resume WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="ResumeResultMap">
+        SELECT <include refid="selectColumns"/>
+        FROM resume
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByNameAndContact" resultMap="ResumeResultMap">
+        SELECT <include refid="selectColumns"/>
+        FROM resume
+        WHERE name = #{name} AND contact = #{contact}
+    </select>
+
+    <select id="selectWithFilter" resultMap="ResumeResultMap">
+        SELECT <include refid="selectColumns"/>
+        FROM resume
+        <where>
+            <if test="locations != null and locations != ''">
+                AND (
+                    expected_locations IS NOT NULL
+                    AND expected_locations != ''
+                    AND (
+                        <foreach collection="locations.split(',')" item="loc" separator=" OR ">
+                            FIND_IN_SET(#{loc}, expected_locations) > 0
+                        </foreach>
+                    )
+                )
+            </if>
+            <if test="minWorkYears != null">
+                AND work_years &gt;= #{minWorkYears}
+            </if>
+            <if test="educations != null and educations != ''">
+                AND education IN
+                <foreach collection="educations.split(',')" item="edu" open="(" separator="," close=")">
+                    #{edu}
+                </foreach>
+            </if>
+            <!-- Salary range overlap: resume range intersects with filter range -->
+            <if test="salaryMin != null">
+                AND salary_max &gt;= #{salaryMin}
+            </if>
+            <if test="salaryMax != null">
+                AND salary_min &lt;= #{salaryMax}
+            </if>
+            <if test="jobStatus != null and jobStatus != ''">
+                AND job_status = #{jobStatus}
+            </if>
+        </where>
+        ORDER BY update_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countWithFilter" resultType="int">
+        SELECT COUNT(*)
+        FROM resume
+        <where>
+            <if test="locations != null and locations != ''">
+                AND (
+                    expected_locations IS NOT NULL
+                    AND expected_locations != ''
+                    AND (
+                        <foreach collection="locations.split(',')" item="loc" separator=" OR ">
+                            FIND_IN_SET(#{loc}, expected_locations) > 0
+                        </foreach>
+                    )
+                )
+            </if>
+            <if test="minWorkYears != null">
+                AND work_years &gt;= #{minWorkYears}
+            </if>
+            <if test="educations != null and educations != ''">
+                AND education IN
+                <foreach collection="educations.split(',')" item="edu" open="(" separator="," close=")">
+                    #{edu}
+                </foreach>
+            </if>
+            <if test="salaryMin != null">
+                AND salary_max &gt;= #{salaryMin}
+            </if>
+            <if test="salaryMax != null">
+                AND salary_min &lt;= #{salaryMax}
+            </if>
+            <if test="jobStatus != null and jobStatus != ''">
+                AND job_status = #{jobStatus}
+            </if>
+        </where>
+    </select>
+
+</mapper>
