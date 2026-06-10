@@ -23,6 +23,12 @@ public class ResumeFilterDTO {
     /** 求职状态: 在职/离职 */
     private String jobStatus;
 
+    /** 关键词(用于AI匹配) */
+    private String keyword;
+
+    /** 排序方式: matchScore-按匹配度排序, updateTime-按更新时间排序 */
+    private String sortBy;
+
     /** 页码(从1开始) */
     private Integer page = 1;
 
@@ -75,6 +81,22 @@ public class ResumeFilterDTO {
 
     public void setJobStatus(String jobStatus) {
         this.jobStatus = jobStatus;
+    }
+
+    public String getKeyword() {
+        return keyword;
+    }
+
+    public void setKeyword(String keyword) {
+        this.keyword = keyword;
+    }
+
+    public String getSortBy() {
+        return sortBy;
+    }
+
+    public void setSortBy(String sortBy) {
+        this.sortBy = sortBy;
     }
 
     public Integer getPage() {

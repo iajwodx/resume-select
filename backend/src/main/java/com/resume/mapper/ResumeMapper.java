@@ -92,4 +92,22 @@ public interface ResumeMapper {
                         @Param("salaryMin") Integer salaryMin,
                         @Param("salaryMax") Integer salaryMax,
                         @Param("jobStatus") String jobStatus);
+
+    /**
+     * Select resumes with filter conditions (no pagination, for AI keyword matching).
+     *
+     * @param locations      expected locations (comma separated, match any)
+     * @param minWorkYears   minimum work years
+     * @param educations     educations (comma separated, match any)
+     * @param salaryMin      minimum salary filter
+     * @param salaryMax      maximum salary filter
+     * @param jobStatus      job status filter
+     * @return filtered resume list (all results, no limit)
+     */
+    List<Resume> selectWithFilterNoPaging(@Param("locations") String locations,
+                                          @Param("minWorkYears") Integer minWorkYears,
+                                          @Param("educations") String educations,
+                                          @Param("salaryMin") Integer salaryMin,
+                                          @Param("salaryMax") Integer salaryMax,
+                                          @Param("jobStatus") String jobStatus);
 }

@@ -106,6 +106,42 @@
         LIMIT #{offset}, #{size}
     </select>
 
+    <select id="selectWithFilterNoPaging" resultMap="ResumeResultMap">
+        SELECT <include refid="selectColumns"/>
+        FROM resume
+        <where>
+            <if test="locations != null and locations != ''">
+                AND (
+                    expected_locations IS NOT NULL
+                    AND expected_locations != ''
+                    AND (
+                        <foreach collection="locations.split(',')" item="loc" separator=" OR ">
+                            FIND_IN_SET(#{loc}, expected_locations) > 0
+                        </foreach>
+                    )
+                )
+            </if>
+            <if test="minWorkYears != null">
+                AND work_years &gt;= #{minWorkYears}
+            </if>
+            <if test="educations != null and educations != ''">
+                AND education IN
+                <foreach collection="educations.split(',')" item="edu" open="(" separator="," close=")">
+                    #{edu}
+                </foreach>
+            </if>
+            <if test="salaryMin != null">
+                AND salary_max &gt;= #{salaryMin}
+            </if>
+            <if test="salaryMax != null">
+                AND salary_min &lt;= #{salaryMax}
+            </if>
+            <if test="jobStatus != null and jobStatus != ''">
+                AND job_status = #{jobStatus}
+            </if>
+        </where>
+    </select>
+
     <select id="countWithFilter" resultType="int">
         SELECT COUNT(*)
         FROM resume

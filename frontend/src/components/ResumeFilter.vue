@@ -54,6 +54,22 @@
         </el-radio-group>
       </el-form-item>
 
+      <el-form-item label="关键词">
+        <el-input
+          v-model="filterForm.keyword"
+          placeholder="输入关键词，空格分隔"
+          clearable
+          style="width: 240px"
+        />
+      </el-form-item>
+
+      <el-form-item label="排序方式">
+        <el-radio-group v-model="filterForm.sortBy">
+          <el-radio label="updateTime">更新时间</el-radio>
+          <el-radio label="matchScore">匹配度</el-radio>
+        </el-radio-group>
+      </el-form-item>
+
       <el-form-item>
         <el-button type="primary" @click="$emit('search', getFilterParams())">查询</el-button>
         <el-button @click="resetFilter">重置</el-button>
@@ -76,7 +92,9 @@ const filterForm = reactive({
   educations: [],
   salaryMin: null,
   salaryMax: null,
-  jobStatus: ''
+  jobStatus: '',
+  keyword: '',
+  sortBy: 'updateTime'
 })
 
 function getFilterParams() {
@@ -99,6 +117,12 @@ function getFilterParams() {
   if (filterForm.jobStatus) {
     params.jobStatus = filterForm.jobStatus
   }
+  if (filterForm.keyword && filterForm.keyword.trim()) {
+    params.keyword = filterForm.keyword.trim()
+  }
+  if (filterForm.sortBy) {
+    params.sortBy = filterForm.sortBy
+  }
   return params
 }
 
@@ -109,6 +133,8 @@ function resetFilter() {
   filterForm.salaryMin = null
   filterForm.salaryMax = null
   filterForm.jobStatus = ''
+  filterForm.keyword = ''
+  filterForm.sortBy = 'updateTime'
   emit('search', {})
 }
 

@@ -31,8 +31,30 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="skills" label="技能" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="projectExperience" label="项目经验" min-width="250" show-overflow-tooltip />
+        <el-table-column label="技能" min-width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-html="highlightText(row.skills, row.matchedTexts)" />
+          </template>
+        </el-table-column>
+        <el-table-column label="项目经验" min-width="250" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-html="highlightText(row.projectExperience, row.matchedTexts)" />
+          </template>
+        </el-table-column>
+        <el-table-column label="匹配度" width="120" align="center">
+          <template #default="{ row }">
+            <template v-if="row.matchScore != null">
+              <el-progress
+                :percentage="row.matchScore"
+                :color="matchScoreColor(row.matchScore)"
+                :stroke-width="16"
+                :text-inside="true"
+                style="width: 100%"
+              />
+            </template>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="updateTime" label="更新时间" width="180" align="center">
           <template #default="{ row }">
             {{ formatTime(row.updateTime) }}
@@ -234,6 +256,42 @@ function formatTime(time) {
   }
   return time
 }
+
+function highlightText(text, matchedTexts) {
+  if (!text) return '-'
+  if (!matchedTexts || matchedTexts.length === 0) return escapeHtml(text)
+
+  let result = escapeHtml(text)
+  // Sort matchedTexts by length descending to avoid partial overlap issues
+  const sorted = [...matchedTexts].sort((a, b) => b.length - a.length)
+  for (const snippet of sorted) {
+    const escapedSnippet = escapeHtml(snippet)
+    // Use global replace for the snippet in the escaped text
+    const regex = new RegExp(escapeRegex(escapedSnippet), 'gi')
+    result = result.replace(regex, '<mark class="match-highlight">$&</mark>')
+  }
+  return result
+}
+
+function escapeHtml(str) {
+  if (!str) return ''
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function matchScoreColor(score) {
+  if (score >= 80) return '#67c23a'
+  if (score >= 50) return '#e6a23c'
+  if (score >= 20) return '#f56c6c'
+  return '#909399'
+}
 </script>
 
 <style scoped>
@@ -246,5 +304,15 @@ function formatTime(time) {
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+</style>
+
+<style>
+.match-highlight {
+  background-color: #ffd54f;
+  color: #333;
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: bold;
 }
 </style>
