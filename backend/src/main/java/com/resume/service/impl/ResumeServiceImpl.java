@@ -329,13 +329,13 @@ public class ResumeServiceImpl implements ResumeService {
             return existing;
         }
         Set<String> merged = new LinkedHashSet<>();
-        for (String part : existing.split(",")) {
+        for (String part : existing.split("[,，\\s]+")) {
             String trimmed = part.trim();
             if (!trimmed.isEmpty()) {
                 merged.add(trimmed);
             }
         }
-        for (String part : newData.split(",")) {
+        for (String part : newData.split("[,，\\s]+")) {
             String trimmed = part.trim();
             if (!trimmed.isEmpty()) {
                 merged.add(trimmed);

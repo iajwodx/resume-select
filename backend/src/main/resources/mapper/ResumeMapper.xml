@@ -95,7 +95,7 @@
                     AND expected_locations != ''
                     AND (
                         <foreach collection="locations.split(',')" item="loc" separator=" OR ">
-                            FIND_IN_SET(#{loc}, expected_locations) > 0
+                            FIND_IN_SET(#{loc}, REPLACE(REPLACE(expected_locations, '，', ','), ' ', ',')) > 0
                         </foreach>
                     )
                 )
@@ -140,7 +140,7 @@
                     AND expected_locations != ''
                     AND (
                         <foreach collection="locations.split(',')" item="loc" separator=" OR ">
-                            FIND_IN_SET(#{loc}, expected_locations) > 0
+                            FIND_IN_SET(#{loc}, REPLACE(REPLACE(expected_locations, '，', ','), ' ', ',')) > 0
                         </foreach>
                     )
                 )
@@ -182,7 +182,7 @@
                     AND expected_locations != ''
                     AND (
                         <foreach collection="locations.split(',')" item="loc" separator=" OR ">
-                            FIND_IN_SET(#{loc}, expected_locations) > 0
+                            FIND_IN_SET(#{loc}, REPLACE(REPLACE(expected_locations, '，', ','), ' ', ',')) > 0
                         </foreach>
                     )
                 )
