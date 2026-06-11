@@ -8,7 +8,7 @@
       <div class="blob blob-4"></div>
     </div>
 
-    <el-header class="app-header">
+    <el-header class="app-header" v-if="role">
       <div class="header-content">
         <div class="brand">
           <div class="brand-icon">
@@ -23,19 +23,26 @@
           <h1 class="app-title">简历筛选平台</h1>
         </div>
         <el-menu mode="horizontal" :default-active="activeMenu" :ellipsis="false" router class="nav-menu">
-          <el-menu-item index="/upload">
+          <el-menu-item v-if="role === 'admin'" index="/upload">
             <el-icon><Upload /></el-icon>
             <span>简历上传</span>
           </el-menu-item>
-          <el-menu-item index="/list">
+          <el-menu-item v-if="role === 'user'" index="/list">
             <el-icon><Filter /></el-icon>
             <span>简历筛选</span>
           </el-menu-item>
-          <el-menu-item index="/favorites">
+          <el-menu-item v-if="role === 'user'" index="/favorites">
             <el-icon><Star /></el-icon>
             <span>收藏简历</span>
           </el-menu-item>
         </el-menu>
+        <div class="header-user">
+          <span class="user-info">{{ username }}（{{ role === 'admin' ? '管理员' : '用户' }}）</span>
+          <el-button link size="small" @click="handleLogout" class="logout-btn">
+            <el-icon><SwitchButton /></el-icon>
+            退出
+          </el-button>
+        </div>
       </div>
     </el-header>
     <el-main class="app-main">
@@ -49,12 +56,35 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { Upload, Filter, Star } from '@element-plus/icons-vue'
+import { ref, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Upload, Filter, Star, SwitchButton } from '@element-plus/icons-vue'
+import axios from 'axios'
 
 const route = useRoute()
+const router = useRouter()
 const activeMenu = computed(() => route.path)
+
+// 响应式用户状态
+const role = ref(localStorage.getItem('role'))
+const username = ref(localStorage.getItem('username'))
+
+// 路由变化时刷新用户状态（登录/退出后跳转时触发）
+router.afterEach(() => {
+  role.value = localStorage.getItem('role')
+  username.value = localStorage.getItem('username')
+})
+
+async function handleLogout() {
+  try {
+    await axios.post('/api/logout', {}, { withCredentials: true })
+  } catch (e) { /* ignore */ }
+  localStorage.removeItem('role')
+  localStorage.removeItem('username')
+  role.value = null
+  username.value = null
+  router.push('/login')
+}
 </script>
 
 <style>
@@ -295,6 +325,28 @@ body {
   color: var(--gd-primary) !important;
   background: rgba(124, 92, 191, 0.1) !important;
   font-weight: 600;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.user-info {
+  font-size: 13px;
+  color: var(--gd-text-secondary);
+  font-weight: 500;
+}
+
+.logout-btn {
+  color: var(--gd-text-muted) !important;
+  font-size: 13px !important;
+}
+
+.logout-btn:hover {
+  color: #ef4444 !important;
 }
 
 .app-main {

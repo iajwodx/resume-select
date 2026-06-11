@@ -20,3 +20,14 @@ CREATE TABLE IF NOT EXISTS resume (
     create_time       DATETIME DEFAULT CURRENT_TIMESTAMP,
     modify_time       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS user (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username    VARCHAR(50) NOT NULL UNIQUE,
+    password    VARCHAR(100) NOT NULL,
+    role        VARCHAR(20) NOT NULL COMMENT 'admin/user',
+    invite_code VARCHAR(50) DEFAULT NULL COMMENT '权限码'
+);
+
+INSERT IGNORE INTO user (username, password, role, invite_code) VALUES ('admin', 'REPLACE_ME', 'admin', 'REPLACE_ME');
+INSERT IGNORE INTO user (username, password, role, invite_code) VALUES ('yonghu', 'REPLACE_ME', 'user', 'REPLACE_ME');

@@ -2,12 +2,18 @@ import axios from 'axios'
 
 const request = axios.create({
   baseURL: '/api',
-  timeout: 120000
+  timeout: 120000,
+  withCredentials: true
 })
 
 request.interceptors.response.use(
   response => response.data,
   error => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('role')
+      localStorage.removeItem('username')
+      window.location.href = '/login'
+    }
     console.error('API Error:', error)
     return Promise.reject(error)
   }

@@ -134,8 +134,8 @@
                 <el-icon style="margin-right: 3px"><StarFilled v-if="resume.isFavorite" /><Star v-else /></el-icon>
                 {{ resume.isFavorite ? '已收藏' : '收藏' }}
               </el-button>
-              <el-button link size="small" @click="editResume(resume.id)" class="action-btn edit-btn">
-                编辑
+              <el-button link size="small" @click="viewResume(resume.id)" class="action-btn edit-btn">
+                详情
               </el-button>
               <el-popconfirm title="确定删除该简历？" @confirm="handleDelete(resume.id)">
                 <template #reference>
@@ -230,8 +230,8 @@
               <el-icon style="margin-right: 2px"><StarFilled v-if="row.isFavorite" /><Star v-else /></el-icon>
               {{ row.isFavorite ? '已收藏' : '收藏' }}
             </el-button>
-            <el-button type="primary" link size="small" @click="editResume(row.id)">
-              编辑
+            <el-button type="primary" link size="small" @click="viewResume(row.id)">
+              详情
             </el-button>
             <el-popconfirm title="确定删除该简历？" @confirm="handleDelete(row.id)">
               <template #reference>
@@ -256,53 +256,68 @@
       />
     </div>
 
-    <!-- Edit Dialog -->
-    <el-dialog v-model="editVisible" title="编辑简历" width="700px" @closed="onEditClosed" class="edit-dialog">
-      <el-form v-if="editForm" ref="editFormRef" :model="editForm" label-width="120px">
-        <el-form-item label="姓名" required>
-          <el-input v-model="editForm.name" />
-        </el-form-item>
-        <el-form-item label="联系方式">
-          <el-input v-model="editForm.contact" placeholder="多个用逗号分隔" />
-        </el-form-item>
-        <el-form-item label="期望工作地点">
-          <el-input v-model="editForm.expectedLocations" placeholder="多个用逗号分隔，如：上海,北京" />
-        </el-form-item>
-        <el-form-item label="工作年限">
-          <el-input-number v-model="editForm.workYears" :min="0" :max="50" />
-          <span style="margin-left: 8px">年</span>
-        </el-form-item>
-        <el-form-item label="学历">
-          <el-select v-model="editForm.education" placeholder="选择学历" style="width: 100%">
-            <el-option v-for="edu in educationOptions" :key="edu" :label="edu" :value="edu" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="期望薪资(K)">
-          <el-col :span="11">
-            <el-input-number v-model="editForm.salaryMin" :min="0" placeholder="最低" style="width: 100%" />
-          </el-col>
-          <el-col :span="2" style="text-align: center; line-height: 32px">-</el-col>
-          <el-col :span="11">
-            <el-input-number v-model="editForm.salaryMax" :min="0" placeholder="最高" style="width: 100%" />
-          </el-col>
-        </el-form-item>
-        <el-form-item label="求职状态">
-          <el-radio-group v-model="editForm.jobStatus">
-            <el-radio label="在职">在职</el-radio>
-            <el-radio label="离职">离职</el-radio>
-            <el-radio label="随时到岗">随时到岗</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="技能">
-          <el-input v-model="editForm.skills" type="textarea" :rows="3" />
-        </el-form-item>
-        <el-form-item label="项目经验">
-          <el-input v-model="editForm.projectExperience" type="textarea" :rows="5" />
-        </el-form-item>
-      </el-form>
+    <!-- Detail Dialog -->
+    <el-dialog v-model="detailVisible" width="720px" @closed="onDetailClosed" class="breeze-dialog" :show-close="false">
+      <template v-if="detailData">
+        <!-- Header: Name + Status -->
+        <div class="breeze-header">
+          <div class="breeze-name">{{ detailData.name }}</div>
+          <div class="breeze-tags">
+            <el-tag v-if="detailData.jobStatus" :type="statusTagType(detailData.jobStatus)" size="small" round effect="plain">{{ detailData.jobStatus }}</el-tag>
+            <el-tag v-if="detailData.isFavorite" size="small" round effect="plain" type="warning">已收藏{{ detailData.fittedPosition ? ' · ' + detailData.fittedPosition : '' }}</el-tag>
+          </div>
+        </div>
+
+        <!-- Info Grid -->
+        <div class="breeze-grid">
+          <div class="breeze-field">
+            <span class="breeze-label">联系方式</span>
+            <span class="breeze-value">{{ detailData.contact || '-' }}</span>
+          </div>
+          <div class="breeze-field">
+            <span class="breeze-label">期望地点</span>
+            <span class="breeze-value">{{ detailData.expectedLocations || '-' }}</span>
+          </div>
+          <div class="breeze-field">
+            <span class="breeze-label">工作年限</span>
+            <span class="breeze-value">{{ detailData.workYears != null ? detailData.workYears + '年' : '-' }}</span>
+          </div>
+          <div class="breeze-field">
+            <span class="breeze-label">学历</span>
+            <span class="breeze-value">{{ detailData.education || '-' }}</span>
+          </div>
+          <div class="breeze-field">
+            <span class="breeze-label">期望薪资</span>
+            <span class="breeze-value">
+              <template v-if="detailData.salaryMin != null || detailData.salaryMax != null">
+                {{ detailData.salaryMin ?? '-' }}K - {{ detailData.salaryMax ?? '-' }}K
+              </template>
+              <template v-else>-</template>
+            </span>
+          </div>
+          <div class="breeze-field">
+            <span class="breeze-label">更新时间</span>
+            <span class="breeze-value breeze-value--sm">{{ formatTime(detailData.updateTime) }}</span>
+          </div>
+        </div>
+
+        <!-- Skills -->
+        <div class="breeze-block">
+          <div class="breeze-block-title">技能</div>
+          <div class="breeze-block-body">
+            <span v-for="skill in (detailData.skills || '').split(',').map(s => s.trim()).filter(Boolean)" :key="skill" class="breeze-chip">{{ skill }}</span>
+            <span v-if="!detailData.skills" class="breeze-empty">暂无</span>
+          </div>
+        </div>
+
+        <!-- Project Experience -->
+        <div class="breeze-block">
+          <div class="breeze-block-title">项目经验</div>
+          <div class="breeze-block-body breeze-block-body--text">{{ detailData.projectExperience || '暂无' }}</div>
+        </div>
+      </template>
       <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" :loading="editSaving" @click="handleEditSave">保存</el-button>
+        <el-button class="breeze-close-btn" @click="detailVisible = false">关闭</el-button>
       </template>
     </el-dialog>
 
@@ -341,6 +356,9 @@ const editVisible = ref(false)
 const editForm = ref(null)
 const editFormRef = ref(null)
 const editSaving = ref(false)
+
+const detailVisible = ref(false)
+const detailData = ref(null)
 const educationOptions = ['博士', '硕士', '本科', '大专', '高中及以下']
 
 const favDialogVisible = ref(false)
@@ -374,19 +392,24 @@ async function fetchList() {
     ElMessage.error('获取简历列表失败')
   } finally {
     loading.value = false
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
 
-async function editResume(id) {
+async function viewResume(id) {
   try {
     const res = await getResume(id)
     if (res.code === 200) {
-      editForm.value = { ...res.data }
-      editVisible.value = true
+      detailData.value = res.data
+      detailVisible.value = true
     }
   } catch (err) {
     ElMessage.error('获取简历失败')
   }
+}
+
+function onDetailClosed() {
+  detailData.value = null
 }
 
 async function handleEditSave() {
@@ -409,10 +432,6 @@ async function handleEditSave() {
   } finally {
     editSaving.value = false
   }
-}
-
-function onEditClosed() {
-  editForm.value = null
 }
 
 async function handleDelete(id) {
@@ -868,5 +887,157 @@ function escapeRegex(str) {
 .view-toggle :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
   background: linear-gradient(135deg, var(--gd-primary), var(--gd-accent)) !important;
   border-color: var(--gd-primary) !important;
+}
+
+/* ── Breeze Detail Dialog ── */
+.breeze-dialog {
+  --breeze-green: #34d399;
+  --breeze-green-soft: #ecfdf5;
+  --breeze-green-border: #a7f3d0;
+  --breeze-green-text: #065f46;
+  --breeze-bg: #f8fffe;
+  --breeze-muted: #6b7280;
+  --breeze-border: #e5e7eb;
+}
+
+.breeze-dialog :deep(.el-dialog) {
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--breeze-bg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--breeze-border);
+}
+
+.breeze-dialog :deep(.el-dialog__header) {
+  display: none;
+}
+
+.breeze-dialog :deep(.el-dialog__body) {
+  padding: 32px 36px 12px;
+}
+
+.breeze-dialog :deep(.el-dialog__footer) {
+  padding: 12px 36px 28px;
+  text-align: center;
+}
+
+/* Header */
+.breeze-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.breeze-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.5px;
+}
+
+.breeze-tags {
+  display: flex;
+  gap: 8px;
+}
+
+/* Info Grid */
+.breeze-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px 24px;
+  padding: 20px 24px;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid var(--breeze-border);
+}
+
+.breeze-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.breeze-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--breeze-muted);
+  letter-spacing: 0.5px;
+}
+
+.breeze-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.breeze-value--sm {
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--breeze-muted);
+}
+
+/* Blocks */
+.breeze-block {
+  margin-top: 20px;
+}
+
+.breeze-block-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--breeze-green-text);
+  margin-bottom: 10px;
+  padding-left: 10px;
+  border-left: 3px solid var(--breeze-green);
+  line-height: 1;
+}
+
+.breeze-block-body {
+  padding: 16px 20px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--breeze-border);
+  line-height: 1.8;
+  font-size: 14px;
+  color: #374151;
+}
+
+.breeze-block-body--text {
+  white-space: pre-wrap;
+}
+
+/* Skill Chips */
+.breeze-chip {
+  display: inline-block;
+  padding: 4px 14px;
+  margin: 3px 4px;
+  background: var(--breeze-green-soft);
+  color: var(--breeze-green-text);
+  border: 1px solid var(--breeze-green-border);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.breeze-empty {
+  color: var(--breeze-muted);
+  font-size: 14px;
+}
+
+/* Close Button */
+.breeze-close-btn {
+  border-radius: 20px !important;
+  padding: 8px 40px !important;
+  font-weight: 500 !important;
+  border: 1px solid var(--breeze-border) !important;
+  color: #374151 !important;
+  background: white !important;
+  transition: all 0.2s !important;
+}
+
+.breeze-close-btn:hover {
+  border-color: var(--breeze-green) !important;
+  color: var(--breeze-green-text) !important;
+  background: var(--breeze-green-soft) !important;
 }
 </style>
