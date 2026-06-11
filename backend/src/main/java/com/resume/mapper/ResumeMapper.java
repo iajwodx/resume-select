@@ -54,6 +54,20 @@ public interface ResumeMapper {
     List<Resume> selectByNameAndContact(@Param("name") String name, @Param("contact") String contact);
 
     /**
+     * Update favorite status and fitted position for a resume.
+     * Explicitly sets columns (including NULL) — does NOT use dynamic <if> null-skip logic.
+     *
+     * @param id             the resume id
+     * @param isFavorite     favorite status
+     * @param fittedPosition fitted position (null → sets DB column to NULL)
+     * @return affected rows
+     */
+    int updateFavorite(@Param("id") Long id,
+                       @Param("isFavorite") Boolean isFavorite,
+                       @Param("fittedPosition") String fittedPosition,
+                       @Param("updateFittedPosition") boolean updateFittedPosition);
+
+    /**
      * Select resumes with filter conditions.
      *
      * @param locations      expected locations (comma separated, match any)

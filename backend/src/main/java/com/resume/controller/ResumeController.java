@@ -115,21 +115,24 @@ public class ResumeController {
 
     /**
      * Toggle favorite status for a resume, with optional fitted position.
+     * Uses dedicated mapper method that can explicitly set fitted_position to NULL.
      */
     @PutMapping("/{id}/favorite")
     public Result<Void> toggleFavorite(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         try {
-            Resume resume = new Resume();
-            resume.setId(id);
+            Boolean isFavorite = null;
             Object isFav = body.get("isFavorite");
             if (isFav != null) {
-                resume.setIsFavorite(Boolean.TRUE.equals(isFav));
+                isFavorite = Boolean.TRUE.equals(isFav);
             }
-            if (body.containsKey("fittedPosition")) {
+            // fittedPosition: present in body → update (null/empty clears to DB NULL), absent → skip
+            boolean updateFittedPosition = body.containsKey("fittedPosition");
+            String fittedPosition = null;
+            if (updateFittedPosition) {
                 Object fittedPos = body.get("fittedPosition");
-                resume.setFittedPosition(fittedPos != null ? fittedPos.toString() : "");
+                fittedPosition = (fittedPos != null && !fittedPos.toString().isEmpty()) ? fittedPos.toString() : null;
             }
-            boolean success = resumeService.updateResume(resume);
+            boolean success = resumeService.updateFavorite(id, isFavorite, fittedPosition, updateFittedPosition);
             if (success) {
                 return Result.success("操作成功", null);
             }

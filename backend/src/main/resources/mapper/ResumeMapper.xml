@@ -52,9 +52,20 @@
             <if test="projectExperience != null">project_experience = #{projectExperience},</if>
             <if test="jobStatus != null">job_status = #{jobStatus},</if>
             <if test="isFavorite != null">is_favorite = #{isFavorite},</if>
-            <if test="fittedPosition != null">fitted_position = NULLIF(#{fittedPosition}, ''),</if>
+            <if test="fittedPosition != null">fitted_position = #{fittedPosition},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
         </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- Explicitly update favorite fields, including setting fitted_position to NULL -->
+    <update id="updateFavorite">
+        UPDATE resume
+        SET is_favorite = #{isFavorite},
+            <choose>
+                <when test="updateFittedPosition == true">fitted_position = #{fittedPosition},</when>
+            </choose>
+            modify_time = NOW()
         WHERE id = #{id}
     </update>
 

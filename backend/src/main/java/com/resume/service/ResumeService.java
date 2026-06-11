@@ -51,4 +51,15 @@ public interface ResumeService {
      * @return true if deletion succeeded
      */
     boolean deleteResume(Long id);
+
+    /**
+     * Update favorite status and fitted position.
+     * Explicitly sets columns — can set fitted_position to NULL.
+     *
+     * @param id             the resume id
+     * @param isFavorite     favorite status
+     * @param fittedPosition fitted position (null → DB NULL)
+     * @return true if update succeeded
+     */
+    boolean updateFavorite(Long id, Boolean isFavorite, String fittedPosition, boolean updateFittedPosition);
 }

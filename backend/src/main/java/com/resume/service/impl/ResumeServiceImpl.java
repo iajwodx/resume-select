@@ -258,6 +258,11 @@ public class ResumeServiceImpl implements ResumeService {
         return resumeMapper.deleteById(id) > 0;
     }
 
+    @Override
+    public boolean updateFavorite(Long id, Boolean isFavorite, String fittedPosition, boolean updateFittedPosition) {
+        return resumeMapper.updateFavorite(id, isFavorite, fittedPosition, updateFittedPosition) > 0;
+    }
+
     /**
      * Convert DeepSeek AI result to Resume entity.
      */
