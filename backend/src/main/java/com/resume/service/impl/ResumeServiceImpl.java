@@ -92,7 +92,9 @@ public class ResumeServiceImpl implements ResumeService {
                     filter.getEducations(),
                     filter.getSalaryMin(),
                     filter.getSalaryMax(),
-                    filter.getJobStatus()
+                    filter.getJobStatus(),
+                    filter.getIsFavorite(),
+                    filter.getFittedPosition()
             );
 
             int total = allResults.size();
@@ -155,6 +157,8 @@ public class ResumeServiceImpl implements ResumeService {
                 resumeMap.put("skills", resume.getSkills());
                 resumeMap.put("projectExperience", resume.getProjectExperience());
                 resumeMap.put("jobStatus", resume.getJobStatus());
+                resumeMap.put("isFavorite", resume.getIsFavorite());
+                resumeMap.put("fittedPosition", resume.getFittedPosition());
                 resumeMap.put("updateTime", resume.getUpdateTime());
                 resumeMap.put("createTime", resume.getCreateTime());
                 resumeMap.put("modifyTime", resume.getModifyTime());
@@ -181,6 +185,8 @@ public class ResumeServiceImpl implements ResumeService {
                     filter.getSalaryMin(),
                     filter.getSalaryMax(),
                     filter.getJobStatus(),
+                    filter.getIsFavorite(),
+                    filter.getFittedPosition(),
                     offset,
                     size
             );
@@ -191,7 +197,9 @@ public class ResumeServiceImpl implements ResumeService {
                     filter.getEducations(),
                     filter.getSalaryMin(),
                     filter.getSalaryMax(),
-                    filter.getJobStatus()
+                    filter.getJobStatus(),
+                    filter.getIsFavorite(),
+                    filter.getFittedPosition()
             );
 
             Map<String, Object> result = new HashMap<>();
@@ -300,6 +308,7 @@ public class ResumeServiceImpl implements ResumeService {
         if (newData.getJobStatus() != null && !newData.getJobStatus().isBlank()) {
             existing.setJobStatus(newData.getJobStatus());
         }
+        // isFavorite and fittedPosition are NOT overwritten by re-upload
         existing.setUpdateTime(LocalDateTime.now());
         return existing;
     }

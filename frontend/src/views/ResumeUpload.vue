@@ -92,8 +92,9 @@
             {{ formatTime(row.updateTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" align="center" fixed="right">
+        <el-table-column label="操作" width="200" align="center" fixed="right">
           <template #default="{ row }">
+            <el-icon v-if="row.isFavorite" style="color: #e6a23c; vertical-align: middle; margin-right: 4px"><StarFilled /></el-icon>
             <el-button type="warning" link size="small" @click="editResume(row.id)">
               编辑
             </el-button>
@@ -173,7 +174,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { UploadFilled } from '@element-plus/icons-vue'
+import { UploadFilled, Star, StarFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { uploadResume, listResumes, getResume, updateResume, deleteResume } from '../api/resume'
 

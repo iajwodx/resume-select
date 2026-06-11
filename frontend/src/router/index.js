@@ -16,6 +16,11 @@ const routes = [
     component: () => import('../views/ResumeList.vue')
   },
   {
+    path: '/favorites',
+    name: 'Favorites',
+    component: () => import('../views/ResumeFavorites.vue')
+  },
+  {
     path: '/edit/:id',
     name: 'Edit',
     component: () => import('../views/ResumeEdit.vue')

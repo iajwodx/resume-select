@@ -15,6 +15,8 @@
         <result property="skills" column="skills"/>
         <result property="projectExperience" column="project_experience"/>
         <result property="jobStatus" column="job_status"/>
+        <result property="isFavorite" column="is_favorite"/>
+        <result property="fittedPosition" column="fitted_position"/>
         <result property="updateTime" column="update_time"/>
         <result property="createTime" column="create_time"/>
         <result property="modifyTime" column="modify_time"/>
@@ -23,14 +25,17 @@
     <sql id="selectColumns">
         id, name, contact, expected_locations, work_years, education,
         salary_min, salary_max, skills, project_experience, job_status,
+        is_favorite, fitted_position,
         update_time, create_time, modify_time
     </sql>
 
     <insert id="insert" parameterType="com.resume.entity.Resume" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO resume (name, contact, expected_locations, work_years, education,
-                           salary_min, salary_max, skills, project_experience, job_status, update_time)
+                           salary_min, salary_max, skills, project_experience, job_status,
+                           is_favorite, fitted_position, update_time)
         VALUES (#{name}, #{contact}, #{expectedLocations}, #{workYears}, #{education},
-                #{salaryMin}, #{salaryMax}, #{skills}, #{projectExperience}, #{jobStatus}, #{updateTime})
+                #{salaryMin}, #{salaryMax}, #{skills}, #{projectExperience}, #{jobStatus},
+                #{isFavorite}, #{fittedPosition}, #{updateTime})
     </insert>
 
     <update id="updateById" parameterType="com.resume.entity.Resume">
@@ -46,6 +51,8 @@
             <if test="skills != null">skills = #{skills},</if>
             <if test="projectExperience != null">project_experience = #{projectExperience},</if>
             <if test="jobStatus != null">job_status = #{jobStatus},</if>
+            <if test="isFavorite != null">is_favorite = #{isFavorite},</if>
+            <if test="fittedPosition != null">fitted_position = NULLIF(#{fittedPosition}, ''),</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
         </set>
         WHERE id = #{id}
@@ -101,6 +108,12 @@
             <if test="jobStatus != null and jobStatus != ''">
                 AND job_status = #{jobStatus}
             </if>
+            <if test="isFavorite != null">
+                AND is_favorite = #{isFavorite}
+            </if>
+            <if test="fittedPosition != null and fittedPosition != ''">
+                AND fitted_position = #{fittedPosition}
+            </if>
         </where>
         ORDER BY update_time DESC
         LIMIT #{offset}, #{size}
@@ -139,6 +152,12 @@
             <if test="jobStatus != null and jobStatus != ''">
                 AND job_status = #{jobStatus}
             </if>
+            <if test="isFavorite != null">
+                AND is_favorite = #{isFavorite}
+            </if>
+            <if test="fittedPosition != null and fittedPosition != ''">
+                AND fitted_position = #{fittedPosition}
+            </if>
         </where>
     </select>
 
@@ -174,6 +193,12 @@
             </if>
             <if test="jobStatus != null and jobStatus != ''">
                 AND job_status = #{jobStatus}
+            </if>
+            <if test="isFavorite != null">
+                AND is_favorite = #{isFavorite}
+            </if>
+            <if test="fittedPosition != null and fittedPosition != ''">
+                AND fitted_position = #{fittedPosition}
             </if>
         </where>
     </select>

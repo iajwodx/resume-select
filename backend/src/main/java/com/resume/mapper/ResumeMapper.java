@@ -62,6 +62,8 @@ public interface ResumeMapper {
      * @param salaryMin      minimum salary filter
      * @param salaryMax      maximum salary filter
      * @param jobStatus      job status filter
+     * @param isFavorite     favorite status filter
+     * @param fittedPosition fitted position filter
      * @param offset         page offset
      * @param size           page size
      * @return filtered resume list
@@ -72,6 +74,8 @@ public interface ResumeMapper {
                                   @Param("salaryMin") Integer salaryMin,
                                   @Param("salaryMax") Integer salaryMax,
                                   @Param("jobStatus") String jobStatus,
+                                  @Param("isFavorite") Boolean isFavorite,
+                                  @Param("fittedPosition") String fittedPosition,
                                   @Param("offset") int offset,
                                   @Param("size") int size);
 
@@ -84,6 +88,8 @@ public interface ResumeMapper {
      * @param salaryMin      minimum salary filter
      * @param salaryMax      maximum salary filter
      * @param jobStatus      job status filter
+     * @param isFavorite     favorite status filter
+     * @param fittedPosition fitted position filter
      * @return total count
      */
     int countWithFilter(@Param("locations") String locations,
@@ -91,7 +97,9 @@ public interface ResumeMapper {
                         @Param("educations") String educations,
                         @Param("salaryMin") Integer salaryMin,
                         @Param("salaryMax") Integer salaryMax,
-                        @Param("jobStatus") String jobStatus);
+                        @Param("jobStatus") String jobStatus,
+                        @Param("isFavorite") Boolean isFavorite,
+                        @Param("fittedPosition") String fittedPosition);
 
     /**
      * Select resumes with filter conditions (no pagination, for AI keyword matching).
@@ -102,6 +110,8 @@ public interface ResumeMapper {
      * @param salaryMin      minimum salary filter
      * @param salaryMax      maximum salary filter
      * @param jobStatus      job status filter
+     * @param isFavorite     favorite status filter
+     * @param fittedPosition fitted position filter
      * @return filtered resume list (all results, no limit)
      */
     List<Resume> selectWithFilterNoPaging(@Param("locations") String locations,
@@ -109,5 +119,7 @@ public interface ResumeMapper {
                                           @Param("educations") String educations,
                                           @Param("salaryMin") Integer salaryMin,
                                           @Param("salaryMax") Integer salaryMax,
-                                          @Param("jobStatus") String jobStatus);
+                                          @Param("jobStatus") String jobStatus,
+                                          @Param("isFavorite") Boolean isFavorite,
+                                          @Param("fittedPosition") String fittedPosition);
 }

@@ -41,3 +41,8 @@ export function updateResume(id, data) {
 export function deleteResume(id) {
   return request.delete(`/resume/${id}`)
 }
+
+// Toggle favorite status
+export function toggleFavorite(id, data) {
+  return request.put(`/resume/${id}/favorite`, data)
+}

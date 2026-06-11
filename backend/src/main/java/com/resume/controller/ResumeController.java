@@ -112,4 +112,31 @@ public class ResumeController {
             return Result.error("删除简历失败: " + e.getMessage());
         }
     }
+
+    /**
+     * Toggle favorite status for a resume, with optional fitted position.
+     */
+    @PutMapping("/{id}/favorite")
+    public Result<Void> toggleFavorite(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        try {
+            Resume resume = new Resume();
+            resume.setId(id);
+            Object isFav = body.get("isFavorite");
+            if (isFav != null) {
+                resume.setIsFavorite(Boolean.TRUE.equals(isFav));
+            }
+            if (body.containsKey("fittedPosition")) {
+                Object fittedPos = body.get("fittedPosition");
+                resume.setFittedPosition(fittedPos != null ? fittedPos.toString() : "");
+            }
+            boolean success = resumeService.updateResume(resume);
+            if (success) {
+                return Result.success("操作成功", null);
+            }
+            return Result.error("操作失败");
+        } catch (Exception e) {
+            log.error("Toggle favorite failed", e);
+            return Result.error("收藏操作失败: " + e.getMessage());
+        }
+    }
 }

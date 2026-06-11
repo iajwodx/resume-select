@@ -6,6 +6,7 @@
         <el-menu mode="horizontal" :default-active="activeMenu" :ellipsis="false" router>
           <el-menu-item index="/upload">简历上传</el-menu-item>
           <el-menu-item index="/list">简历筛选</el-menu-item>
+          <el-menu-item index="/favorites">收藏简历</el-menu-item>
         </el-menu>
       </div>
     </el-header>

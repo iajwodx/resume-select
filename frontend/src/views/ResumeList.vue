@@ -60,8 +60,17 @@
             {{ formatTime(row.updateTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" align="center" fixed="right">
+        <el-table-column label="操作" width="200" align="center" fixed="right">
           <template #default="{ row }">
+            <el-button
+              :type="row.isFavorite ? 'warning' : 'default'"
+              link
+              size="small"
+              @click="handleFavorite(row)"
+            >
+              <el-icon style="margin-right: 2px"><StarFilled v-if="row.isFavorite" /><Star v-else /></el-icon>
+              {{ row.isFavorite ? '已收藏' : '收藏' }}
+            </el-button>
             <el-button type="warning" link size="small" @click="editResume(row.id)">
               编辑
             </el-button>
@@ -137,14 +146,27 @@
         <el-button type="primary" :loading="editSaving" @click="handleEditSave">保存</el-button>
       </template>
     </el-dialog>
+    <!-- Favorite Dialog -->
+    <el-dialog v-model="favDialogVisible" title="收藏简历" width="400px" @closed="onFavDialogClosed">
+      <el-form label-width="80px">
+        <el-form-item label="适配岗位">
+          <el-input v-model="favFittedPosition" placeholder="请输入适配岗位（可留空）" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="favDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmFavorite">确认收藏</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Star, StarFilled } from '@element-plus/icons-vue'
 import ResumeFilter from '../components/ResumeFilter.vue'
-import { listResumes, getResume, updateResume, deleteResume } from '../api/resume'
+import { listResumes, getResume, updateResume, deleteResume, toggleFavorite } from '../api/resume'
 
 const filterRef = ref(null)
 const loading = ref(false)
@@ -159,6 +181,10 @@ const editForm = ref(null)
 const editFormRef = ref(null)
 const editSaving = ref(false)
 const educationOptions = ['博士', '硕士', '本科', '大专', '高中及以下']
+
+const favDialogVisible = ref(false)
+const favResumeId = ref(null)
+const favFittedPosition = ref('')
 
 onMounted(() => {
   fetchList()
@@ -240,6 +266,57 @@ async function handleDelete(id) {
   } catch (err) {
     ElMessage.error('删除失败')
   }
+}
+
+function handleFavorite(row) {
+  if (row.isFavorite) {
+    // Cancel favorite directly
+    cancelFavorite(row.id)
+  } else {
+    // Show dialog to input fitted position
+    favResumeId.value = row.id
+    favFittedPosition.value = row.fittedPosition || ''
+    favDialogVisible.value = true
+  }
+}
+
+async function confirmFavorite() {
+  try {
+    const res = await toggleFavorite(favResumeId.value, {
+      isFavorite: true,
+      fittedPosition: favFittedPosition.value
+    })
+    if (res.code === 200) {
+      ElMessage.success('收藏成功')
+      favDialogVisible.value = false
+      fetchList()
+    } else {
+      ElMessage.error(res.message || '收藏失败')
+    }
+  } catch (err) {
+    ElMessage.error('收藏失败')
+  }
+}
+
+async function cancelFavorite(id) {
+  try {
+    const res = await toggleFavorite(id, {
+      isFavorite: false
+    })
+    if (res.code === 200) {
+      ElMessage.success('已取消收藏')
+      fetchList()
+    } else {
+      ElMessage.error(res.message || '操作失败')
+    }
+  } catch (err) {
+    ElMessage.error('操作失败')
+  }
+}
+
+function onFavDialogClosed() {
+  favResumeId.value = null
+  favFittedPosition.value = ''
 }
 
 function statusTagType(status) {
