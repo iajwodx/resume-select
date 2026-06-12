@@ -276,10 +276,8 @@ public class ResumeServiceImpl implements ResumeService {
 
     @Override
     public boolean deleteResume(Long id) {
-        // Also delete all favorite records for this resume
-        // (We'll handle this by deleting from the favorite table first)
-        // Note: For simplicity, we rely on the application to clean up.
-        // In production, consider using ON DELETE CASCADE on the foreign key.
+        // First clean up all favorite records for this resume
+        favoriteMapper.deleteByResumeId(id);
         return resumeMapper.deleteById(id) > 0;
     }
 

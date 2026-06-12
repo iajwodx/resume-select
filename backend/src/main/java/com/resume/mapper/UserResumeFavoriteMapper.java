@@ -36,6 +36,11 @@ public interface UserResumeFavoriteMapper {
                                               @Param("resumeId") Long resumeId);
 
     /**
+     * Remove all favorite records for a resume (used when deleting a resume).
+     */
+    int deleteByResumeId(@Param("resumeId") Long resumeId);
+
+    /**
      * Get distinct fitted positions for a user.
      */
     List<String> selectDistinctPositions(@Param("userId") Long userId);

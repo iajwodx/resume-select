@@ -25,12 +25,18 @@
         WHERE user_id = #{userId} AND resume_id = #{resumeId}
     </select>
 
+    <delete id="deleteByResumeId">
+        DELETE FROM user_resume_favorite
+        WHERE resume_id = #{resumeId}
+    </delete>
+
     <select id="selectDistinctPositions" resultType="java.lang.String">
-        SELECT DISTINCT fitted_position
-        FROM user_resume_favorite
-        WHERE user_id = #{userId}
-          AND fitted_position IS NOT NULL
-          AND fitted_position != ''
+        SELECT DISTINCT f.fitted_position
+        FROM user_resume_favorite f
+        INNER JOIN resume r ON f.resume_id = r.id
+        WHERE f.user_id = #{userId}
+          AND f.fitted_position IS NOT NULL
+          AND f.fitted_position != ''
     </select>
 
 </mapper>
