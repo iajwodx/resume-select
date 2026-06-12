@@ -186,7 +186,6 @@ const editPosValue = ref('')
 
 onMounted(() => {
   fetchList()
-  fetchPositionOptions()
 })
 
 async function fetchList() {
@@ -204,28 +203,12 @@ async function fetchList() {
     if (res.code === 200) {
       resumeList.value = res.data.list
       total.value = res.data.total
+      positionOptions.value = res.data.fittedPositions || []
     }
   } catch (err) {
     ElMessage.error('获取收藏列表失败')
   } finally {
     loading.value = false
-  }
-}
-
-async function fetchPositionOptions() {
-  try {
-    const res = await listResumes({ isFavorite: true, size: 1000 })
-    if (res.code === 200) {
-      const positions = new Set()
-      res.data.list.forEach(r => {
-        if (r.fittedPosition) {
-          positions.add(r.fittedPosition)
-        }
-      })
-      positionOptions.value = Array.from(positions)
-    }
-  } catch (err) {
-    // silently ignore
   }
 }
 
@@ -250,7 +233,6 @@ async function saveFittedPosition() {
       ElMessage.success('保存成功')
       editPosVisible.value = false
       fetchList()
-      fetchPositionOptions()
     } else {
       ElMessage.error(res.message || '保存失败')
     }
@@ -267,7 +249,6 @@ async function handleUnfavorite(id) {
     if (res.code === 200) {
       ElMessage.success('已取消收藏')
       fetchList()
-      fetchPositionOptions()
     } else {
       ElMessage.error(res.message || '操作失败')
     }

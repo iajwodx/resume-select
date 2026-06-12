@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.resume.mapper.UserResumeFavoriteMapper">
+
+    <insert id="insert" parameterType="com.resume.entity.UserResumeFavorite">
+        INSERT INTO user_resume_favorite (user_id, resume_id, fitted_position)
+        VALUES (#{userId}, #{resumeId}, #{fittedPosition})
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM user_resume_favorite
+        WHERE user_id = #{userId} AND resume_id = #{resumeId}
+    </delete>
+
+    <update id="updateFittedPosition">
+        UPDATE user_resume_favorite
+        SET fitted_position = #{fittedPosition}
+        WHERE user_id = #{userId} AND resume_id = #{resumeId}
+    </update>
+
+    <select id="selectByUserAndResume" resultType="com.resume.entity.UserResumeFavorite">
+        SELECT user_id, resume_id, fitted_position
+        FROM user_resume_favorite
+        WHERE user_id = #{userId} AND resume_id = #{resumeId}
+    </select>
+
+    <select id="selectDistinctPositions" resultType="java.lang.String">
+        SELECT DISTINCT fitted_position
+        FROM user_resume_favorite
+        WHERE user_id = #{userId}
+          AND fitted_position IS NOT NULL
+          AND fitted_position != ''
+    </select>
+
+</mapper>

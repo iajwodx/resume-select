@@ -39,12 +39,6 @@ public class Resume {
     /** 求职状态: 在职/离职 */
     private String jobStatus;
 
-    /** 是否收藏: true-已收藏, false-未收藏 */
-    private Boolean isFavorite;
-
-    /** 适配岗位 */
-    private String fittedPosition;
-
     /** 简历更新时间 */
     private LocalDateTime updateTime;
 
@@ -140,22 +134,6 @@ public class Resume {
 
     public void setJobStatus(String jobStatus) {
         this.jobStatus = jobStatus;
-    }
-
-    public Boolean getIsFavorite() {
-        return isFavorite;
-    }
-
-    public void setIsFavorite(Boolean isFavorite) {
-        this.isFavorite = isFavorite;
-    }
-
-    public String getFittedPosition() {
-        return fittedPosition;
-    }
-
-    public void setFittedPosition(String fittedPosition) {
-        this.fittedPosition = fittedPosition;
     }
 
     public LocalDateTime getUpdateTime() {

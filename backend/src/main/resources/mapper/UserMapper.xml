@@ -4,14 +4,14 @@
 <mapper namespace="com.resume.mapper.UserMapper">
 
     <select id="findByUsername" resultType="com.resume.entity.User">
-        SELECT id, username, password, role, invite_code
+        SELECT id, username, password, role
         FROM user
         WHERE username = #{username}
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO user (username, password, role, invite_code)
-        VALUES (#{username}, #{password}, #{role}, #{inviteCode})
+        INSERT INTO user (username, password, role)
+        VALUES (#{username}, #{password}, #{role})
     </insert>
 
 </mapper>

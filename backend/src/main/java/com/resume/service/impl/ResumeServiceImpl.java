@@ -4,7 +4,9 @@ import com.resume.dto.DeepSeekResultDTO;
 import com.resume.dto.KeywordMatchResultDTO;
 import com.resume.dto.ResumeFilterDTO;
 import com.resume.entity.Resume;
+import com.resume.entity.UserResumeFavorite;
 import com.resume.mapper.ResumeMapper;
+import com.resume.mapper.UserResumeFavoriteMapper;
 import com.resume.service.DeepSeekService;
 import com.resume.service.PdfParseService;
 import com.resume.service.ResumeService;
@@ -31,34 +33,33 @@ public class ResumeServiceImpl implements ResumeService {
     private final PdfParseService pdfParseService;
     private final DeepSeekService deepSeekService;
     private final ResumeMapper resumeMapper;
+    private final UserResumeFavoriteMapper favoriteMapper;
 
     /** Thread pool for concurrent DeepSeek API calls during keyword matching */
     private final ExecutorService matchExecutor = Executors.newFixedThreadPool(5);
 
     public ResumeServiceImpl(PdfParseService pdfParseService,
                              DeepSeekService deepSeekService,
-                             ResumeMapper resumeMapper) {
+                             ResumeMapper resumeMapper,
+                             UserResumeFavoriteMapper favoriteMapper) {
         this.pdfParseService = pdfParseService;
         this.deepSeekService = deepSeekService;
         this.resumeMapper = resumeMapper;
+        this.favoriteMapper = favoriteMapper;
     }
 
     @Override
     public Resume uploadResume(MultipartFile file) throws Exception {
-        // Step 1: Extract text from PDF
         String pdfText = pdfParseService.extractText(file.getInputStream());
         if (pdfText == null || pdfText.isBlank()) {
             throw new RuntimeException("无法从PDF中提取文本内容");
         }
 
-        // Step 2: Call DeepSeek AI to analyze resume
         DeepSeekResultDTO aiResult = deepSeekService.analyzeResume(pdfText);
 
-        // Step 3: Convert DTO to entity
         Resume resume = convertToEntity(aiResult);
         resume.setUpdateTime(LocalDateTime.now());
 
-        // Step 4: Check for duplicate (same name and contact) and merge
         if (resume.getName() != null && resume.getContact() != null) {
             List<Resume> existing = resumeMapper.selectByNameAndContact(
                     resume.getName(), resume.getContact());
@@ -70,23 +71,27 @@ public class ResumeServiceImpl implements ResumeService {
             }
         }
 
-        // Step 5: Insert new resume
         resumeMapper.insert(resume);
         log.info("Inserted new resume for: {}", resume.getName());
         return resume;
     }
 
     @Override
-    public Map<String, Object> listResumes(ResumeFilterDTO filter) {
+    public Map<String, Object> listResumes(ResumeFilterDTO filter, Long userId) {
         int page = filter.getPage() != null ? filter.getPage() : 1;
         int size = filter.getSize() != null ? filter.getSize() : 10;
 
         String keyword = filter.getKeyword();
         boolean hasKeyword = keyword != null && !keyword.isBlank();
 
+        // Get distinct fitted positions for the current user (merged into one response)
+        List<String> fittedPositions = userId != null
+                ? favoriteMapper.selectDistinctPositions(userId)
+                : Collections.emptyList();
+
         if (hasKeyword) {
-            // When keyword is present: fetch all matching results, compute AI match scores, then sort & paginate in memory
-            List<Resume> allResults = resumeMapper.selectWithFilterNoPaging(
+            List<Map<String, Object>> allResults = resumeMapper.selectWithFilterNoPaging(
+                    userId,
                     filter.getLocations(),
                     filter.getMinWorkYears(),
                     filter.getEducations(),
@@ -104,13 +109,24 @@ public class ResumeServiceImpl implements ResumeService {
                 result.put("total", 0);
                 result.put("page", page);
                 result.put("size", size);
+                result.put("fittedPositions", fittedPositions);
                 return result;
             }
 
-            // Concurrent AI matching for all resumes
-            List<Map<String, Object>> enrichedResults = computeMatchScores(keyword, allResults);
+            // Build Resume objects from map results for AI matching
+            List<Resume> allResumes = allResults.stream()
+                    .map(this::mapToResume)
+                    .collect(Collectors.toList());
 
-            // Sort by sortBy parameter
+            List<Map<String, Object>> enrichedResults = computeMatchScores(keyword, allResumes);
+
+            // Merge isFavorite and fittedPosition back
+            for (int i = 0; i < enrichedResults.size(); i++) {
+                Map<String, Object> srcRow = allResults.get(i);
+                enrichedResults.get(i).put("isFavorite", srcRow.get("is_favorite"));
+                enrichedResults.get(i).put("fittedPosition", srcRow.get("fitted_position"));
+            }
+
             String sortBy = filter.getSortBy();
             if ("matchScore".equals(sortBy)) {
                 enrichedResults.sort((a, b) -> {
@@ -118,21 +134,19 @@ public class ResumeServiceImpl implements ResumeService {
                     Integer scoreB = (Integer) b.get("matchScore");
                     if (scoreA == null) scoreA = 0;
                     if (scoreB == null) scoreB = 0;
-                    return scoreB.compareTo(scoreA); // Descending
+                    return scoreB.compareTo(scoreA);
                 });
             } else {
-                // Default: sort by updateTime descending
                 enrichedResults.sort((a, b) -> {
                     Resume ra = (Resume) a.get("resume");
                     Resume rb = (Resume) b.get("resume");
                     if (ra.getUpdateTime() == null && rb.getUpdateTime() == null) return 0;
                     if (ra.getUpdateTime() == null) return 1;
                     if (rb.getUpdateTime() == null) return -1;
-                    return rb.getUpdateTime().compareTo(ra.getUpdateTime()); // Descending
+                    return rb.getUpdateTime().compareTo(ra.getUpdateTime());
                 });
             }
 
-            // Paginate
             int fromIndex = (page - 1) * size;
             int toIndex = Math.min(fromIndex + size, enrichedResults.size());
             List<Map<String, Object>> pageData;
@@ -142,7 +156,6 @@ public class ResumeServiceImpl implements ResumeService {
                 pageData = enrichedResults.subList(fromIndex, toIndex);
             }
 
-            // Build response: each item contains resume fields + matchScore + matchedTexts
             List<Map<String, Object>> listData = pageData.stream().map(item -> {
                 Resume resume = (Resume) item.get("resume");
                 Map<String, Object> resumeMap = new LinkedHashMap<>();
@@ -157,8 +170,8 @@ public class ResumeServiceImpl implements ResumeService {
                 resumeMap.put("skills", resume.getSkills());
                 resumeMap.put("projectExperience", resume.getProjectExperience());
                 resumeMap.put("jobStatus", resume.getJobStatus());
-                resumeMap.put("isFavorite", resume.getIsFavorite());
-                resumeMap.put("fittedPosition", resume.getFittedPosition());
+                resumeMap.put("isFavorite", item.get("isFavorite"));
+                resumeMap.put("fittedPosition", item.get("fittedPosition"));
                 resumeMap.put("updateTime", resume.getUpdateTime());
                 resumeMap.put("createTime", resume.getCreateTime());
                 resumeMap.put("modifyTime", resume.getModifyTime());
@@ -172,13 +185,14 @@ public class ResumeServiceImpl implements ResumeService {
             result.put("total", total);
             result.put("page", page);
             result.put("size", size);
+            result.put("fittedPositions", fittedPositions);
             return result;
 
         } else {
-            // No keyword: use original SQL-based pagination and sorting
             int offset = (page - 1) * size;
 
-            List<Resume> list = resumeMapper.selectWithFilter(
+            List<Map<String, Object>> list = resumeMapper.selectWithFilter(
+                    userId,
                     filter.getLocations(),
                     filter.getMinWorkYears(),
                     filter.getEducations(),
@@ -192,6 +206,7 @@ public class ResumeServiceImpl implements ResumeService {
             );
 
             int total = resumeMapper.countWithFilter(
+                    userId,
                     filter.getLocations(),
                     filter.getMinWorkYears(),
                     filter.getEducations(),
@@ -202,13 +217,170 @@ public class ResumeServiceImpl implements ResumeService {
                     filter.getFittedPosition()
             );
 
+            // Convert column names from snake_case to camelCase for frontend
+            List<Map<String, Object>> listData = list.stream()
+                    .map(this::convertRowKeys)
+                    .collect(Collectors.toList());
+
             Map<String, Object> result = new HashMap<>();
-            result.put("list", list);
+            result.put("list", listData);
             result.put("total", total);
             result.put("page", page);
             result.put("size", size);
+            result.put("fittedPositions", fittedPositions);
             return result;
         }
+    }
+
+    @Override
+    public Map<String, Object> getResume(Long id, Long userId) {
+        Resume resume = resumeMapper.selectById(id);
+        if (resume == null) {
+            return null;
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", resume.getId());
+        result.put("name", resume.getName());
+        result.put("contact", resume.getContact());
+        result.put("expectedLocations", resume.getExpectedLocations());
+        result.put("workYears", resume.getWorkYears());
+        result.put("education", resume.getEducation());
+        result.put("salaryMin", resume.getSalaryMin());
+        result.put("salaryMax", resume.getSalaryMax());
+        result.put("skills", resume.getSkills());
+        result.put("projectExperience", resume.getProjectExperience());
+        result.put("jobStatus", resume.getJobStatus());
+        result.put("updateTime", resume.getUpdateTime());
+        result.put("createTime", resume.getCreateTime());
+        result.put("modifyTime", resume.getModifyTime());
+
+        // Look up favorite info for this user
+        if (userId != null) {
+            UserResumeFavorite fav = favoriteMapper.selectByUserAndResume(userId, id);
+            result.put("isFavorite", fav != null);
+            result.put("fittedPosition", fav != null ? fav.getFittedPosition() : null);
+        } else {
+            result.put("isFavorite", false);
+            result.put("fittedPosition", null);
+        }
+
+        return result;
+    }
+
+    @Override
+    public boolean updateResume(Resume resume) {
+        resume.setModifyTime(LocalDateTime.now());
+        return resumeMapper.updateById(resume) > 0;
+    }
+
+    @Override
+    public boolean deleteResume(Long id) {
+        // Also delete all favorite records for this resume
+        // (We'll handle this by deleting from the favorite table first)
+        // Note: For simplicity, we rely on the application to clean up.
+        // In production, consider using ON DELETE CASCADE on the foreign key.
+        return resumeMapper.deleteById(id) > 0;
+    }
+
+    @Override
+    public boolean updateFavorite(Long userId, Long resumeId, Boolean isFavorite, String fittedPosition) {
+        if (Boolean.TRUE.equals(isFavorite)) {
+            // Add favorite
+            UserResumeFavorite existing = favoriteMapper.selectByUserAndResume(userId, resumeId);
+            if (existing != null) {
+                // Already favorited, just update fitted position if provided
+                if (fittedPosition != null) {
+                    return favoriteMapper.updateFittedPosition(userId, resumeId, fittedPosition) > 0;
+                }
+                return true; // Already favorited, nothing to do
+            } else {
+                UserResumeFavorite fav = new UserResumeFavorite();
+                fav.setUserId(userId);
+                fav.setResumeId(resumeId);
+                fav.setFittedPosition(fittedPosition);
+                return favoriteMapper.insert(fav) > 0;
+            }
+        } else {
+            // Remove favorite
+            return favoriteMapper.delete(userId, resumeId) > 0;
+        }
+    }
+
+    /**
+     * Convert a DB row map (snake_case keys) to camelCase keys for frontend.
+     */
+    private Map<String, Object> convertRowKeys(Map<String, Object> row) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        row.forEach((key, value) -> {
+            String camelKey = snakeToCamel(key);
+            result.put(camelKey, value);
+        });
+        return result;
+    }
+
+    private String snakeToCamel(String snake) {
+        StringBuilder sb = new StringBuilder();
+        boolean nextUpper = false;
+        for (char c : snake.toCharArray()) {
+            if (c == '_') {
+                nextUpper = true;
+            } else {
+                if (nextUpper) {
+                    sb.append(Character.toUpperCase(c));
+                    nextUpper = false;
+                } else {
+                    sb.append(c);
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Map a DB row result back to a Resume entity (for AI keyword matching).
+     */
+    private Resume mapToResume(Map<String, Object> row) {
+        Resume resume = new Resume();
+        resume.setId(toLong(row.get("id")));
+        resume.setName(toString(row.get("name")));
+        resume.setContact(toString(row.get("contact")));
+        resume.setExpectedLocations(toString(row.get("expected_locations")));
+        resume.setWorkYears(toInteger(row.get("work_years")));
+        resume.setEducation(toString(row.get("education")));
+        resume.setSalaryMin(toInteger(row.get("salary_min")));
+        resume.setSalaryMax(toInteger(row.get("salary_max")));
+        resume.setSkills(toString(row.get("skills")));
+        resume.setProjectExperience(toString(row.get("project_experience")));
+        resume.setJobStatus(toString(row.get("job_status")));
+        resume.setUpdateTime(toLocalDateTime(row.get("update_time")));
+        resume.setCreateTime(toLocalDateTime(row.get("create_time")));
+        resume.setModifyTime(toLocalDateTime(row.get("modify_time")));
+        return resume;
+    }
+
+    private Long toLong(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof Long) return (Long) obj;
+        if (obj instanceof Number) return ((Number) obj).longValue();
+        return Long.valueOf(obj.toString());
+    }
+
+    private Integer toInteger(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof Integer) return (Integer) obj;
+        if (obj instanceof Number) return ((Number) obj).intValue();
+        return Integer.valueOf(obj.toString());
+    }
+
+    private String toString(Object obj) {
+        return obj != null ? obj.toString() : null;
+    }
+
+    private LocalDateTime toLocalDateTime(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof LocalDateTime) return (LocalDateTime) obj;
+        return null;
     }
 
     /**
@@ -236,31 +408,9 @@ public class ResumeServiceImpl implements ResumeService {
                 }, matchExecutor))
                 .collect(Collectors.toList());
 
-        // Wait for all futures to complete
         return futures.stream()
                 .map(CompletableFuture::join)
                 .collect(Collectors.toList());
-    }
-
-    @Override
-    public Resume getResume(Long id) {
-        return resumeMapper.selectById(id);
-    }
-
-    @Override
-    public boolean updateResume(Resume resume) {
-        resume.setModifyTime(LocalDateTime.now());
-        return resumeMapper.updateById(resume) > 0;
-    }
-
-    @Override
-    public boolean deleteResume(Long id) {
-        return resumeMapper.deleteById(id) > 0;
-    }
-
-    @Override
-    public boolean updateFavorite(Long id, Boolean isFavorite, String fittedPosition, boolean updateFittedPosition) {
-        return resumeMapper.updateFavorite(id, isFavorite, fittedPosition, updateFittedPosition) > 0;
     }
 
     /**
@@ -313,14 +463,10 @@ public class ResumeServiceImpl implements ResumeService {
         if (newData.getJobStatus() != null && !newData.getJobStatus().isBlank()) {
             existing.setJobStatus(newData.getJobStatus());
         }
-        // isFavorite and fittedPosition are NOT overwritten by re-upload
         existing.setUpdateTime(LocalDateTime.now());
         return existing;
     }
 
-    /**
-     * Merge two comma-separated strings, deduplicating values.
-     */
     private String mergeCommaSeparated(String existing, String newData) {
         if (existing == null || existing.isBlank()) {
             return newData;

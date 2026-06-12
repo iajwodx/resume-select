@@ -4,6 +4,7 @@ import com.resume.dto.ResumeFilterDTO;
 import com.resume.dto.Result;
 import com.resume.entity.Resume;
 import com.resume.service.ResumeService;
+import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +16,7 @@ import java.util.Map;
  * REST controller for resume operations.
  */
 @RestController
-@RequestMapping("/api/resume")//这个是类路径
+@RequestMapping("/api/resume")
 public class ResumeController {
 
     private static final Logger log = LoggerFactory.getLogger(ResumeController.class);
@@ -29,7 +30,7 @@ public class ResumeController {
     /**
      * Upload a PDF resume for AI analysis and storage.
      */
-    @PostMapping("/upload")//完整/api/resume/upload POST
+    @PostMapping("/upload")
     public Result<Resume> uploadResume(@RequestParam("file") MultipartFile file) {
         try {
             if (file.isEmpty()) {
@@ -49,11 +50,13 @@ public class ResumeController {
 
     /**
      * Get resume list with optional filter conditions.
+     * Session provides userId for per-user favorite info.
      */
     @GetMapping("/list")
-    public Result<Map<String, Object>> listResumes(ResumeFilterDTO filter) {
+    public Result<Map<String, Object>> listResumes(ResumeFilterDTO filter, HttpSession session) {
         try {
-            Map<String, Object> result = resumeService.listResumes(filter);
+            Long userId = getUserIdFromSession(session);
+            Map<String, Object> result = resumeService.listResumes(filter, userId);
             return Result.success(result);
         } catch (Exception e) {
             log.error("List resumes failed", e);
@@ -63,11 +66,13 @@ public class ResumeController {
 
     /**
      * Get a single resume by id.
+     * Session provides userId for per-user favorite info.
      */
     @GetMapping("/{id}")
-    public Result<Resume> getResume(@PathVariable Long id) {
+    public Result<Map<String, Object>> getResume(@PathVariable Long id, HttpSession session) {
         try {
-            Resume resume = resumeService.getResume(id);
+            Long userId = getUserIdFromSession(session);
+            Map<String, Object> resume = resumeService.getResume(id, userId);
             if (resume == null) {
                 return Result.error(404, "简历不存在");
             }
@@ -115,24 +120,29 @@ public class ResumeController {
 
     /**
      * Toggle favorite status for a resume, with optional fitted position.
-     * Uses dedicated mapper method that can explicitly set fitted_position to NULL.
+     * Session provides userId for per-user favorite.
      */
     @PutMapping("/{id}/favorite")
-    public Result<Void> toggleFavorite(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+    public Result<Void> toggleFavorite(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpSession session) {
         try {
+            Long userId = getUserIdFromSession(session);
+            if (userId == null) {
+                return Result.error(401, "未登录");
+            }
+
             Boolean isFavorite = null;
             Object isFav = body.get("isFavorite");
             if (isFav != null) {
                 isFavorite = Boolean.TRUE.equals(isFav);
             }
-            // fittedPosition: present in body → update (null/empty clears to DB NULL), absent → skip
-            boolean updateFittedPosition = body.containsKey("fittedPosition");
+
             String fittedPosition = null;
-            if (updateFittedPosition) {
-                Object fittedPos = body.get("fittedPosition");
-                fittedPosition = (fittedPos != null && !fittedPos.toString().isEmpty()) ? fittedPos.toString() : null;
+            Object fittedPos = body.get("fittedPosition");
+            if (fittedPos != null && !fittedPos.toString().isEmpty()) {
+                fittedPosition = fittedPos.toString();
             }
-            boolean success = resumeService.updateFavorite(id, isFavorite, fittedPosition, updateFittedPosition);
+
+            boolean success = resumeService.updateFavorite(userId, id, isFavorite, fittedPosition);
             if (success) {
                 return Result.success("操作成功", null);
             }
@@ -141,5 +151,19 @@ public class ResumeController {
             log.error("Toggle favorite failed", e);
             return Result.error("收藏操作失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * Extract userId from session.
+     */
+    private Long getUserIdFromSession(HttpSession session) {
+        Object userId = session.getAttribute("userId");
+        if (userId == null) {
+            return null;
+        }
+        if (userId instanceof Long) {
+            return (Long) userId;
+        }
+        return Long.valueOf(userId.toString());
     }
 }

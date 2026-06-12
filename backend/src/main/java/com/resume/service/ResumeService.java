@@ -13,10 +13,6 @@ public interface ResumeService {
 
     /**
      * Upload a PDF resume, parse it with AI, and save to database.
-     *
-     * @param file the uploaded PDF file
-     * @return the saved resume entity
-     * @throws Exception if upload or parsing fails
      */
     Resume uploadResume(MultipartFile file) throws Exception;
 
@@ -24,42 +20,37 @@ public interface ResumeService {
      * Get resume list with optional filter conditions.
      *
      * @param filter the filter parameters
-     * @return map containing "list" and "total"
+     * @param userId current user id (from session), used for per-user favorite
+     * @return map containing "list", "total", "page", "size", "fittedPositions"
      */
-    Map<String, Object> listResumes(ResumeFilterDTO filter);
+    Map<String, Object> listResumes(ResumeFilterDTO filter, Long userId);
 
     /**
      * Get a single resume by id.
      *
-     * @param id the resume id
-     * @return the resume entity
+     * @param id     the resume id
+     * @param userId current user id (from session), used for per-user favorite
+     * @return the resume entity with favorite info
      */
-    Resume getResume(Long id);
+    Map<String, Object> getResume(Long id, Long userId);
 
     /**
      * Update a resume.
-     *
-     * @param resume the resume entity with updated fields
-     * @return true if update succeeded
      */
     boolean updateResume(Resume resume);
 
     /**
      * Delete a resume by id.
-     *
-     * @param id the resume id
-     * @return true if deletion succeeded
      */
     boolean deleteResume(Long id);
 
     /**
-     * Update favorite status and fitted position.
-     * Explicitly sets columns — can set fitted_position to NULL.
+     * Toggle favorite: add or remove favorite, optionally update fitted position.
      *
-     * @param id             the resume id
-     * @param isFavorite     favorite status
-     * @param fittedPosition fitted position (null → DB NULL)
-     * @return true if update succeeded
+     * @param userId         current user id
+     * @param resumeId       the resume id
+     * @param isFavorite     true to favorite, false to unfavorite
+     * @param fittedPosition fitted position (only used when isFavorite is true)
      */
-    boolean updateFavorite(Long id, Boolean isFavorite, String fittedPosition, boolean updateFittedPosition);
+    boolean updateFavorite(Long userId, Long resumeId, Boolean isFavorite, String fittedPosition);
 }

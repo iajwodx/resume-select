@@ -15,27 +15,63 @@
         <result property="skills" column="skills"/>
         <result property="projectExperience" column="project_experience"/>
         <result property="jobStatus" column="job_status"/>
-        <result property="isFavorite" column="is_favorite"/>
-        <result property="fittedPosition" column="fitted_position"/>
         <result property="updateTime" column="update_time"/>
         <result property="createTime" column="create_time"/>
         <result property="modifyTime" column="modify_time"/>
     </resultMap>
 
     <sql id="selectColumns">
-        id, name, contact, expected_locations, work_years, education,
-        salary_min, salary_max, skills, project_experience, job_status,
-        is_favorite, fitted_position,
-        update_time, create_time, modify_time
+        r.id, r.name, r.contact, r.expected_locations, r.work_years, r.education,
+        r.salary_min, r.salary_max, r.skills, r.project_experience, r.job_status,
+        r.update_time, r.create_time, r.modify_time
+    </sql>
+
+    <!-- Common filter conditions (used by selectWithFilter, countWithFilter, selectWithFilterNoPaging) -->
+    <sql id="filterConditions">
+        <if test="locations != null and locations != ''">
+            AND (
+                r.expected_locations IS NOT NULL
+                AND r.expected_locations != ''
+                AND (
+                    <foreach collection="locations.split(',')" item="loc" separator=" OR ">
+                        FIND_IN_SET(#{loc}, REPLACE(REPLACE(r.expected_locations, '，', ','), ' ', ',')) > 0
+                    </foreach>
+                )
+            )
+        </if>
+        <if test="minWorkYears != null">
+            AND r.work_years &gt;= #{minWorkYears}
+        </if>
+        <if test="educations != null and educations != ''">
+            AND r.education IN
+            <foreach collection="educations.split(',')" item="edu" open="(" separator="," close=")">
+                #{edu}
+            </foreach>
+        </if>
+        <if test="salaryMin != null">
+            AND r.salary_max &gt;= #{salaryMin}
+        </if>
+        <if test="salaryMax != null">
+            AND r.salary_min &lt;= #{salaryMax}
+        </if>
+        <if test="jobStatus != null and jobStatus != ''">
+            AND r.job_status = #{jobStatus}
+        </if>
+        <if test="isFavorite != null and isFavorite == true">
+            AND f.user_id IS NOT NULL
+        </if>
+        <if test="fittedPosition != null and fittedPosition != ''">
+            AND f.fitted_position = #{fittedPosition}
+        </if>
     </sql>
 
     <insert id="insert" parameterType="com.resume.entity.Resume" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO resume (name, contact, expected_locations, work_years, education,
                            salary_min, salary_max, skills, project_experience, job_status,
-                           is_favorite, fitted_position, update_time)
+                           update_time)
         VALUES (#{name}, #{contact}, #{expectedLocations}, #{workYears}, #{education},
                 #{salaryMin}, #{salaryMax}, #{skills}, #{projectExperience}, #{jobStatus},
-                #{isFavorite}, #{fittedPosition}, #{updateTime})
+                #{updateTime})
     </insert>
 
     <update id="updateById" parameterType="com.resume.entity.Resume">
@@ -51,21 +87,8 @@
             <if test="skills != null">skills = #{skills},</if>
             <if test="projectExperience != null">project_experience = #{projectExperience},</if>
             <if test="jobStatus != null">job_status = #{jobStatus},</if>
-            <if test="isFavorite != null">is_favorite = #{isFavorite},</if>
-            <if test="fittedPosition != null">fitted_position = #{fittedPosition},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
         </set>
-        WHERE id = #{id}
-    </update>
-
-    <!-- Explicitly update favorite fields, including setting fitted_position to NULL -->
-    <update id="updateFavorite">
-        UPDATE resume
-        SET is_favorite = #{isFavorite},
-            <choose>
-                <when test="updateFittedPosition == true">fitted_position = #{fittedPosition},</when>
-            </choose>
-            modify_time = NOW()
         WHERE id = #{id}
     </update>
 
@@ -74,143 +97,51 @@
     </delete>
 
     <select id="selectById" resultMap="ResumeResultMap">
-        SELECT <include refid="selectColumns"/>
+        SELECT id, name, contact, expected_locations, work_years, education,
+               salary_min, salary_max, skills, project_experience, job_status,
+               update_time, create_time, modify_time
         FROM resume
         WHERE id = #{id}
     </select>
 
     <select id="selectByNameAndContact" resultMap="ResumeResultMap">
-        SELECT <include refid="selectColumns"/>
+        SELECT id, name, contact, expected_locations, work_years, education,
+               salary_min, salary_max, skills, project_experience, job_status,
+               update_time, create_time, modify_time
         FROM resume
         WHERE name = #{name} AND contact = #{contact}
     </select>
 
-    <select id="selectWithFilter" resultMap="ResumeResultMap">
-        SELECT <include refid="selectColumns"/>
-        FROM resume
+    <select id="selectWithFilter" resultType="java.util.LinkedHashMap">
+        SELECT <include refid="selectColumns"/>,
+               (f.user_id IS NOT NULL) AS is_favorite,
+               f.fitted_position
+        FROM resume r
+        LEFT JOIN user_resume_favorite f ON r.id = f.resume_id AND f.user_id = #{userId}
         <where>
-            <if test="locations != null and locations != ''">
-                AND (
-                    expected_locations IS NOT NULL
-                    AND expected_locations != ''
-                    AND (
-                        <foreach collection="locations.split(',')" item="loc" separator=" OR ">
-                            FIND_IN_SET(#{loc}, REPLACE(REPLACE(expected_locations, '，', ','), ' ', ',')) > 0
-                        </foreach>
-                    )
-                )
-            </if>
-            <if test="minWorkYears != null">
-                AND work_years &gt;= #{minWorkYears}
-            </if>
-            <if test="educations != null and educations != ''">
-                AND education IN
-                <foreach collection="educations.split(',')" item="edu" open="(" separator="," close=")">
-                    #{edu}
-                </foreach>
-            </if>
-            <!-- Salary range overlap: resume range intersects with filter range -->
-            <if test="salaryMin != null">
-                AND salary_max &gt;= #{salaryMin}
-            </if>
-            <if test="salaryMax != null">
-                AND salary_min &lt;= #{salaryMax}
-            </if>
-            <if test="jobStatus != null and jobStatus != ''">
-                AND job_status = #{jobStatus}
-            </if>
-            <if test="isFavorite != null">
-                AND is_favorite = #{isFavorite}
-            </if>
-            <if test="fittedPosition != null and fittedPosition != ''">
-                AND fitted_position = #{fittedPosition}
-            </if>
+            <include refid="filterConditions"/>
         </where>
-        ORDER BY update_time DESC
+        ORDER BY r.update_time DESC
         LIMIT #{offset}, #{size}
-    </select>
-
-    <select id="selectWithFilterNoPaging" resultMap="ResumeResultMap">
-        SELECT <include refid="selectColumns"/>
-        FROM resume
-        <where>
-            <if test="locations != null and locations != ''">
-                AND (
-                    expected_locations IS NOT NULL
-                    AND expected_locations != ''
-                    AND (
-                        <foreach collection="locations.split(',')" item="loc" separator=" OR ">
-                            FIND_IN_SET(#{loc}, REPLACE(REPLACE(expected_locations, '，', ','), ' ', ',')) > 0
-                        </foreach>
-                    )
-                )
-            </if>
-            <if test="minWorkYears != null">
-                AND work_years &gt;= #{minWorkYears}
-            </if>
-            <if test="educations != null and educations != ''">
-                AND education IN
-                <foreach collection="educations.split(',')" item="edu" open="(" separator="," close=")">
-                    #{edu}
-                </foreach>
-            </if>
-            <if test="salaryMin != null">
-                AND salary_max &gt;= #{salaryMin}
-            </if>
-            <if test="salaryMax != null">
-                AND salary_min &lt;= #{salaryMax}
-            </if>
-            <if test="jobStatus != null and jobStatus != ''">
-                AND job_status = #{jobStatus}
-            </if>
-            <if test="isFavorite != null">
-                AND is_favorite = #{isFavorite}
-            </if>
-            <if test="fittedPosition != null and fittedPosition != ''">
-                AND fitted_position = #{fittedPosition}
-            </if>
-        </where>
     </select>
 
     <select id="countWithFilter" resultType="int">
         SELECT COUNT(*)
-        FROM resume
+        FROM resume r
+        LEFT JOIN user_resume_favorite f ON r.id = f.resume_id AND f.user_id = #{userId}
         <where>
-            <if test="locations != null and locations != ''">
-                AND (
-                    expected_locations IS NOT NULL
-                    AND expected_locations != ''
-                    AND (
-                        <foreach collection="locations.split(',')" item="loc" separator=" OR ">
-                            FIND_IN_SET(#{loc}, REPLACE(REPLACE(expected_locations, '，', ','), ' ', ',')) > 0
-                        </foreach>
-                    )
-                )
-            </if>
-            <if test="minWorkYears != null">
-                AND work_years &gt;= #{minWorkYears}
-            </if>
-            <if test="educations != null and educations != ''">
-                AND education IN
-                <foreach collection="educations.split(',')" item="edu" open="(" separator="," close=")">
-                    #{edu}
-                </foreach>
-            </if>
-            <if test="salaryMin != null">
-                AND salary_max &gt;= #{salaryMin}
-            </if>
-            <if test="salaryMax != null">
-                AND salary_min &lt;= #{salaryMax}
-            </if>
-            <if test="jobStatus != null and jobStatus != ''">
-                AND job_status = #{jobStatus}
-            </if>
-            <if test="isFavorite != null">
-                AND is_favorite = #{isFavorite}
-            </if>
-            <if test="fittedPosition != null and fittedPosition != ''">
-                AND fitted_position = #{fittedPosition}
-            </if>
+            <include refid="filterConditions"/>
+        </where>
+    </select>
+
+    <select id="selectWithFilterNoPaging" resultType="java.util.LinkedHashMap">
+        SELECT <include refid="selectColumns"/>,
+               (f.user_id IS NOT NULL) AS is_favorite,
+               f.fitted_position
+        FROM resume r
+        LEFT JOIN user_resume_favorite f ON r.id = f.resume_id AND f.user_id = #{userId}
+        <where>
+            <include refid="filterConditions"/>
         </where>
     </select>
 

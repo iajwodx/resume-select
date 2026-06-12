@@ -14,8 +14,6 @@ CREATE TABLE IF NOT EXISTS resume (
     skills            TEXT COMMENT '技能',
     project_experience TEXT COMMENT '项目经验',
     job_status        VARCHAR(20) COMMENT '求职状态: 在职/离职/随时到岗',
-    is_favorite       TINYINT(1) DEFAULT 0 COMMENT '是否收藏: 0-未收藏, 1-已收藏',
-    fitted_position   VARCHAR(100) DEFAULT NULL COMMENT '适配岗位',
     update_time       DATETIME COMMENT '简历更新时间',
     create_time       DATETIME DEFAULT CURRENT_TIMESTAMP,
     modify_time       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -25,6 +23,15 @@ CREATE TABLE IF NOT EXISTS user (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
     username    VARCHAR(50) NOT NULL UNIQUE,
     password    VARCHAR(100) NOT NULL,
-    role        VARCHAR(20) NOT NULL COMMENT 'admin/user',
-    invite_code VARCHAR(50) DEFAULT NULL COMMENT '权限码'
+    role        VARCHAR(20) NOT NULL COMMENT 'admin/user'
 );
+
+CREATE TABLE IF NOT EXISTS user_resume_favorite (
+    user_id         BIGINT NOT NULL COMMENT '用户ID',
+    resume_id       BIGINT NOT NULL COMMENT '简历ID',
+    fitted_position VARCHAR(100) DEFAULT NULL COMMENT '适配岗位',
+    PRIMARY KEY (user_id, resume_id)
+);
+
+INSERT IGNORE INTO user (username, password, role) VALUES ('admin', '123456', 'admin');
+INSERT IGNORE INTO user (username, password, role) VALUES ('111', '123456', 'user');
