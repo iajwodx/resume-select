@@ -64,10 +64,6 @@
           <el-form-item>
             <el-input v-model="regForm.confirmPassword" type="password" placeholder="确认密码" size="large" prefix-icon="Lock" show-password />
           </el-form-item>
-          <el-form-item>
-            <el-input v-model="regForm.inviteCode" placeholder="权限码" size="large" prefix-icon="Key" />
-          </el-form-item>
-          <div class="invite-hint">权限码以 ADMIN 开头注册为管理员，否则为普通用户</div>
           <el-button type="primary" size="large" :loading="loading" @click="handleRegister" class="login-btn">注 册</el-button>
         </el-form>
         <div class="switch-link">
@@ -89,18 +85,18 @@ const loginRole = ref('admin')
 const loading = ref(false)
 const isRegister = ref(false)
 
-const form = ref({ username: 'admin', password: '' })
-const regForm = ref({ username: '', password: '', confirmPassword: '', inviteCode: '' })
+const form = ref({ username: '', password: '' })
+const regForm = ref({ username: '', password: '', confirmPassword: '' })
 
-// 切换 Tab 时预填用户名
-watch(loginRole, (role) => {
-  form.value.username = role === 'admin' ? 'admin' : 'yonghu'
+// 切换 Tab 时清空表单
+watch(loginRole, () => {
+  form.value.username = ''
   form.value.password = ''
 })
 
 function switchToRegister() {
   isRegister.value = true
-  regForm.value = { username: '', password: '', confirmPassword: '', inviteCode: '' }
+  regForm.value = { username: '', password: '', confirmPassword: '' }
 }
 
 function switchToLogin() {
@@ -136,7 +132,7 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
-  const { username, password, confirmPassword, inviteCode } = regForm.value
+  const { username, password, confirmPassword } = regForm.value
 
   if (!username || username.length > 10) {
     ElMessage.warning('账号需要1-10个字符')
@@ -150,15 +146,11 @@ async function handleRegister() {
     ElMessage.warning('两次密码不一致')
     return
   }
-  if (!inviteCode) {
-    ElMessage.warning('请输入权限码')
-    return
-  }
 
   loading.value = true
   try {
     const res = await axios.post('/api/register', {
-      username, password, inviteCode
+      username, password
     }, { withCredentials: true })
     if (res.data.code === 200) {
       ElMessage.success('注册成功，请登录')
@@ -337,10 +329,4 @@ async function handleRegister() {
   text-decoration: underline;
 }
 
-.invite-hint {
-  font-size: 12px;
-  color: #9ca3af;
-  margin-bottom: 12px;
-  line-height: 1.5;
-}
 </style>

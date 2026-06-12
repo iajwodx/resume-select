@@ -15,7 +15,7 @@ import java.util.Map;
  * REST controller for resume operations.
  */
 @RestController
-@RequestMapping("/api/resume")
+@RequestMapping("/api/resume")//这个是类路径
 public class ResumeController {
 
     private static final Logger log = LoggerFactory.getLogger(ResumeController.class);
@@ -29,7 +29,7 @@ public class ResumeController {
     /**
      * Upload a PDF resume for AI analysis and storage.
      */
-    @PostMapping("/upload")
+    @PostMapping("/upload")//完整/api/resume/upload POST
     public Result<Resume> uploadResume(@RequestParam("file") MultipartFile file) {
         try {
             if (file.isEmpty()) {

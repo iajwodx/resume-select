@@ -13,7 +13,7 @@ import java.util.Map;
  * Login and session management controller.
  */
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api")//这个是类路径
 public class LoginController {
 
     @Autowired
@@ -22,7 +22,7 @@ public class LoginController {
     /**
      * Login: validate username/password, store in session.
      */
-    @PostMapping("/login")
+    @PostMapping("/login")//这个的完整路径是 /api/login，方法是POST
     public Result<Map<String, Object>> login(@RequestBody Map<String, String> body, HttpSession session) {
         String username = body.get("username");
         String password = body.get("password");
@@ -75,15 +75,14 @@ public class LoginController {
     }
 
     /**
-     * Register: create a new user with invite code validation.
-     * account: 1-10 chars, password: 6-12 chars, inviteCode required.
-     * Invite code starting with "ADMIN" → admin role, others → user role.
+     * Register: create a new user (always as 'user' role).
+     * Admin accounts are pre-created in the database.
+     * account: 1-10 chars, password: 6-12 chars.
      */
     @PostMapping("/register")
     public Result<Map<String, Object>> register(@RequestBody Map<String, String> body) {
         String username = body.get("username");
         String password = body.get("password");
-        String inviteCode = body.get("inviteCode");
 
         // Validate input
         if (username == null || username.isBlank()) {
@@ -95,24 +94,17 @@ public class LoginController {
         if (password == null || password.length() < 6 || password.length() > 12) {
             return Result.error(400, "密码长度需要6-12位");
         }
-        if (inviteCode == null || inviteCode.isBlank()) {
-            return Result.error(400, "权限码不能为空");
-        }
 
         // Check if username already exists
         if (userMapper.findByUsername(username) != null) {
             return Result.error(400, "该账号已被注册");
         }
 
-        // Determine role by invite code prefix
-        String role = inviteCode.toUpperCase().startsWith("ADMIN") ? "admin" : "user";
-
-        // Create user
+        // Always register as 'user' role
         User user = new User();
         user.setUsername(username);
         user.setPassword(password);
-        user.setRole(role);
-        user.setInviteCode(inviteCode);
+        user.setRole("user");
 
         userMapper.insert(user);
 
