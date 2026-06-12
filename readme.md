@@ -164,7 +164,24 @@
 - MySQL 8.0
 - Node.js 18+
 
-### 1. 初始化数据库
+### 1. 配置环境变量
+
+```bash
+# 复制模板并填写
+cp .env.example .env
+cp backend/src/main/resources/application.yml.example backend/src/main/resources/application.yml
+```
+
+编辑 `.env`，填入你的数据库密码和 DeepSeek API Key：
+
+```
+DEEPSEEK_API_KEY=sk-你的Key
+MYSQL_ROOT_PASSWORD=你的密码
+```
+
+编辑 `application.yml`，将 `MYSQL_PASSWORD` 改为你的数据库密码。
+
+### 2. 初始化数据库
 
 ```sql
 -- 创建数据库
